@@ -1,0 +1,71 @@
+{
+    "variables": {
+      "aws_access_key": "",
+      "aws_secret_key": "",
+      "aws_region": "us-west-2",
+      "source_ami": "ami-0aff18ec83b712f05",
+      "instance_type": "t2.micro"
+    },
+    "builders": [
+      {
+        "type": "amazon-ebs",
+        "access_key": "{{user `aws_access_key`}}",
+        "secret_key": "{{user `aws_secret_key`}}",
+        "region": "{{user `aws_region`}}",
+        "source_ami": "{{user `source_ami`}}",
+        "instance_type": "{{user `instance_type`}}",
+        "ssh_username": "ubuntu",
+        "ami_name": "nginx-website-ami-{{timestamp}}"
+      }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [
+              "DEBIAN_FRONTEND=noninteractive sudo apt-get install -y nginx"
+            ]
+          },
+        {
+            "type": "shell",
+            "inline": [
+              "mkdir /tmp/website"
+            ]
+          },
+        {
+        "type": "file",
+        "source": "/home/julia/git/devops-projects/aws-terraform-web-deployment/website/",
+        "destination": "/tmp/website/"
+      },
+      {
+        "type": "shell",
+        "inline": [
+          "ls -la /tmp/website",   
+          "sudo mv /tmp/website /var/www/html/",
+          "sudo chown -R www-data:www-data /var/www/html/website",
+          "sudo chmod -R 755 /var/www/html/website"
+        ]
+      },
+      {
+        "type": "file",
+        "source": "/home/julia/git/devops-projects/aws-terraform-web-deployment/website.conf",
+        "destination": "/tmp/website.conf"
+      },
+      {
+        "type": "shell",
+        "inline": [
+          "sudo cp /tmp/website.conf /etc/nginx/sites-available/website",
+          "sudo ln -s /etc/nginx/sites-available/website /etc/nginx/sites-enabled/website",
+          "sudo rm /etc/nginx/sites-enabled/default",
+          "sudo systemctl restart nginx"
+        ]
+      }
+    ],
+    "post-processors": [
+      {
+        "type": "manifest",
+        "output": "manifest.json",
+        "strip_path": true
+      }
+    ]
+  }
+  
